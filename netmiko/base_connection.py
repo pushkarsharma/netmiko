@@ -16,7 +16,7 @@ import time
 import socket
 import re
 import io
-from os import path
+import os
 from threading import Lock
 
 from netmiko.netmiko_globals import MAX_BUFFER, BACKSPACE_CHAR
