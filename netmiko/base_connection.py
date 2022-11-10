@@ -16,7 +16,8 @@ import time
 import socket
 import re
 import io
-from os import path
+import os
+import logging
 from threading import Lock
 
 from netmiko.netmiko_globals import MAX_BUFFER, BACKSPACE_CHAR
@@ -26,6 +27,26 @@ from netmiko.py23_compat import string_types, bytes_io_types
 from netmiko import log
 from datetime import datetime
 import serial
+
+
+#paramiko.util.log_to_file("test_paramiko.log", level = "DEBUG")
+work_dir = os.getenv('CAFYKIT_WORK_DIR')
+print(f"#######work_dir = {work_dir}")
+if work_dir:
+    formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
+    paramiko_log_folder = os.path.join(work_dir, 'test_paramiko.log')
+    paramiko.util.log_to_file(paramiko_log_folder, level = "DEBUG")
+    fh = logging.FileHandler(paramiko_log_folder)
+    fh.setFormatter(formatter)
+    log = logging.getLogger("netmiko")
+    log.addHandler(fh)
+    log.setLevel(logging.DEBUG)
+    log.addHandler(fh)
+else:
+    from netmiko import log
+
+#print("All loggers in this process: ------ ", logging.root.manager.loggerDict)
 
 
 class BaseConnection(object):
@@ -935,6 +956,15 @@ class BaseConnection(object):
                 if self.ansi_escape_codes:
                     prompt = self.strip_ansi_escape_codes(prompt).strip()
             else:
+                t = 0
+                while t <= 60:
+                    t = t +15
+                    time.sleep(15)
+                    prompt = self.read_channel().strip()
+                    if prompt:
+                        if self.ansi_escape_codes:
+                            prompt = self.strip_ansi_escape_codes(prompt).strip()
+                            break
                 self.write_channel(self.RETURN)
                 time.sleep(delay_factor * .1)
             count += 1
@@ -1053,13 +1083,15 @@ class BaseConnection(object):
         if delay_factor == 1 and max_loops == 500:
             # Default arguments are being used; use self.timeout instead
             max_loops = int(self.timeout / loop_delay)
-
+        log.info("In send_command, global_delay:{}, delay_factor:{}, max_loops:{}".format(
+            self.global_delay_factor, delay_factor, max_loops))
         # Find the current router prompt
         if expect_string is None:
             if auto_find_prompt:
                 try:
                     prompt = self.find_prompt(delay_factor=delay_factor)
                 except ValueError:
+                    log.info("From send_command: ValueError encountered from find_prompt() is not re-raised")
                     prompt = self.base_prompt
             else:
                 prompt = self.base_prompt
