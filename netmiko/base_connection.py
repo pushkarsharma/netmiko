@@ -33,9 +33,12 @@ import serial
 work_dir = os.getenv('CAFYKIT_WORK_DIR')
 print(f"#######work_dir = {work_dir}")
 if work_dir:
+    formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
+                                  datefmt='%Y-%m-%d %H:%M:%S')
     paramiko_log_folder = os.path.join(work_dir, 'test_paramiko.log')
     paramiko.util.log_to_file(paramiko_log_folder, level = "DEBUG")
     fh = logging.FileHandler(paramiko_log_folder)
+    fh.setFormatter(formatter)
     log = logging.getLogger("netmiko")
     log.addHandler(fh)
     log.setLevel(logging.DEBUG)
