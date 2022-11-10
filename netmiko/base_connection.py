@@ -17,6 +17,7 @@ import socket
 import re
 import io
 import os
+import logging
 from threading import Lock
 
 from netmiko.netmiko_globals import MAX_BUFFER, BACKSPACE_CHAR
