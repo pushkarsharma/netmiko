@@ -153,10 +153,10 @@ class CiscoXrBase(CiscoBaseConnection):
         output = output.replace("(admin)", "")
         return check_string in output
 
-    def exit_config_mode(self, exit_config: str = "end", pattern: str = "") -> str:
+    def exit_config_mode(self, exit_config: str = "end", pattern: str = "", skip_check=False) -> str:
         """Exit configuration mode."""
         output = ""
-        if self.check_config_mode():
+        if skip_check or self.check_config_mode():
             self.write_channel(self.normalize_cmd(exit_config))
             # Make sure you read until you detect the command echo (avoid getting out of sync)
             if self.global_cmd_verify is not False:
@@ -166,11 +166,13 @@ class CiscoXrBase(CiscoBaseConnection):
             # Read until we detect either an Uncommitted change or the end prompt
             if not re.search(r"(Uncommitted|#$)", output):
                 output += self.read_until_pattern(pattern=r"(Uncommitted|#$)")
-            if "Uncommitted changes found" in output:
+            if "Uncommitted" in output:
                 self.write_channel(self.normalize_cmd("no\n"))
                 output += self.read_until_pattern(pattern=r"[>#]")
             if not re.search(pattern, output, flags=re.M):
                 output += self.read_until_pattern(pattern=pattern)
+            if skip_check:
+                return output
             if self.check_config_mode():
                 raise ValueError("Failed to exit configuration mode")
         return output
@@ -189,7 +191,9 @@ class CiscoXrSSH(CiscoXrBase):
 class CiscoXrTelnet(CiscoXrBase):
     """Cisco XR Telnet driver."""
 
-    pass
+    def session_preparation(self):
+        """Prepare the session after the connection has been established."""
+        self.set_base_prompt()
 
 
 class CiscoXrFileTransfer(CiscoFileTransfer):
